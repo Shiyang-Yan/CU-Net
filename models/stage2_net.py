@@ -19,11 +19,15 @@ class Temporal_I3D_SGA_STD(nn.Module):
 
     def forward(self,x,act=True,extract=False):
         logits_all = []
+        uncertainty_all = []
         for i in range(self.k):
             logits=self.Regressor[i](x)
             if act:
                 logits=self.Softmax(logits)
+                entropy = -logits*torch.log(logits)
             logits_all.append(logits)
+            uncertainty_all.append(entropy)
+        uncertainty_all = torch.stack(uncertainty_all)
         if self.soft_voting:
             logits_all = torch.stack(logits_all, 1)  #### should be "dimension Batchsize, 2, k"
             logits_final = logits_all.mean(-1)
@@ -38,5 +42,5 @@ class Temporal_I3D_SGA_STD(nn.Module):
                 one_num += (result==1)    #### batchsize, 1
             nums = torch.cat([zero_num, one_num], -1)    #### batchsize, 2
             pseudo_labels = torch.argmax(nums, 1)
-        return pseudo_labels
+        return pseudo_labels, uncertainty_all
 
